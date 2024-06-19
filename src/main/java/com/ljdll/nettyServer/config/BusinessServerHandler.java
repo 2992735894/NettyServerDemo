@@ -1,5 +1,8 @@
 package com.ljdll.nettyServer.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ljdll.nettyServer.common.constant.R;
+import com.ljdll.nettyServer.common.utils.ApplicationContextUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
@@ -11,9 +14,15 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.util.CharsetUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.springframework.context.ApplicationContext;
+import org.springframework.util.CollectionUtils;
+import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class BusinessServerHandler extends SimpleChannelInboundHandler<Object> {
     Log log = LogFactory.getLog(BusinessServerHandler.class);
@@ -52,8 +61,39 @@ public class BusinessServerHandler extends SimpleChannelInboundHandler<Object> {
         ctx.writeAndFlush(new TextWebSocketFrame("readWebSocket"));
     }
 
-    public void channelReadHttpRequest(ChannelHandlerContext ctx, FullHttpRequest fullHttpRequest) {
-        ByteBuf content = Unpooled.copiedBuffer("readHttp", CharsetUtil.UTF_8);
+    public void channelReadHttpRequest(ChannelHandlerContext ctx, FullHttpRequest fullHttpRequest) throws Exception {
+        ByteBuf content;
+        if (userMap.containsKey(ctx.channel().id())) {
+            content = Unpooled.copiedBuffer("upgradeWebSocket", CharsetUtil.UTF_8);
+        } else {
+            ApplicationContext webApplicationContext = ApplicationContextUtil.getApplicationContext();
+            RequestMappingHandlerMapping mapping = webApplicationContext.getBean(RequestMappingHandlerMapping.class);
+            Map<RequestMappingInfo, HandlerMethod> methodMap = mapping.getHandlerMethods();
+            boolean find = false;
+            Object object = null;
+            for (Map.Entry<RequestMappingInfo, HandlerMethod> entry : methodMap.entrySet()) {
+                // 匹配路由
+                if (!CollectionUtils.isEmpty(entry.getKey().getMethodsCondition().getMethods())
+                        && entry.getKey().getMethodsCondition().getMethods().stream().toList().getFirst().name().equals(fullHttpRequest.method().name())
+                        && entry.getKey().getDirectPaths().stream().toList().getFirst().equals(fullHttpRequest.uri())) {
+                    find = true;
+                    // 获取对应的bean实例并执行
+                    Object instance = ApplicationContextUtil.getApplicationContext().getBean(entry.getValue().getBeanType());
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    object = objectMapper.writeValueAsString(entry.getValue().getMethod().invoke(instance));
+                }
+            }
+            if (!find) {
+                object = R.fail(R.NOT_FOUND, "error route");
+            }
+
+            if (Objects.nonNull(object)) {
+                content = Unpooled.copiedBuffer(object.toString(), CharsetUtil.UTF_8);
+            } else {
+                content = Unpooled.copiedBuffer("null", CharsetUtil.UTF_8);
+            }
+        }
+
         HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, content);
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=UTF-8");
         response.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
