@@ -1,5 +1,6 @@
 package com.ljdll.nettyServer.config;
 
+import com.alibaba.fastjson2.JSONObject;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ljdll.nettyServer.common.constant.R;
 import com.ljdll.nettyServer.common.utils.ApplicationContextUtil;
@@ -16,10 +17,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
+import java.lang.reflect.Parameter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -75,12 +78,68 @@ public class BusinessServerHandler extends SimpleChannelInboundHandler<Object> {
                 // 匹配路由
                 if (!CollectionUtils.isEmpty(entry.getKey().getMethodsCondition().getMethods())
                         && entry.getKey().getMethodsCondition().getMethods().stream().toList().getFirst().name().equals(fullHttpRequest.method().name())
-                        && entry.getKey().getDirectPaths().stream().toList().getFirst().equals(fullHttpRequest.uri())) {
+                        &&
+                        (entry.getKey().getPatternValues().stream().toList().getFirst().equals(fullHttpRequest.uri())
+                                || isPathUri(entry.getKey().getPatternValues().stream().toList().getFirst(), fullHttpRequest.uri()))) {
                     find = true;
+                    boolean pathValue = isPathUri(entry.getKey().getPatternValues().stream().toList().getFirst(), fullHttpRequest.uri());
                     // 获取对应的bean实例并执行
                     Object instance = ApplicationContextUtil.getApplicationContext().getBean(entry.getValue().getBeanType());
+                    Class<?>[] paramClazzArr = entry.getValue().getMethod().getParameterTypes();
                     ObjectMapper objectMapper = new ObjectMapper();
-                    object = objectMapper.writeValueAsString(entry.getValue().getMethod().invoke(instance));
+
+                    if (paramClazzArr.length == 0) {
+                        object = objectMapper.writeValueAsString(entry.getValue().getMethod().invoke(instance));
+                    } else {
+                        if (pathValue) {
+                            String value = fullHttpRequest.uri().split("/")[fullHttpRequest.uri().split("/").length - 1].replace("\\{", "").replace("\\}", "");
+                            object = objectMapper.writeValueAsString(entry.getValue().getMethod().invoke(instance, value));
+                        } else {
+                            String contentType = fullHttpRequest.headers().get("Content-Type");
+                            if (StringUtils.hasText(contentType)) {
+                                String paramType = contentType.split(";")[0];
+                                if (paramType.equals("application/json")) {
+                                    String body = fullHttpRequest.content().toString(CharsetUtil.UTF_8);
+                                    object = objectMapper.writeValueAsString(entry.getValue().getMethod().invoke(instance, JSONObject.parseObject(body, paramClazzArr[0])));
+                                } else if (paramType.equals("multipart/form-data")) {
+                                    String[] formString = fullHttpRequest.content().toString(CharsetUtil.UTF_8).split("name=");
+                                    Map<String, String> formMap = new HashMap<>();
+                                    for (int index = 1; index < formString.length; index++) {
+                                        String key = formString[index].split("\\r\\n")[0].replace("\"", "");
+                                        String value = formString[index].split("\\r\\n\\r\\n")[1].split("\\r\\n")[0];
+                                        formMap.put(key, value);
+                                    }
+
+                                    Parameter[] parameters = entry.getValue().getMethod().getParameters();
+                                    Object[] params = new Object[parameters.length];
+                                    if (formString.length > 1) {
+                                        for (int index = 0; index < parameters.length; index++) {
+                                            Object param = formMap.get(parameters[index].getName());
+                                            Class<?> clazz = parameters[index].getType();
+                                            if (clazz.equals(String.class) ||
+                                                    clazz.equals(Integer.class) ||
+                                                    clazz.equals(Long.class) ||
+                                                    clazz.equals(Double.class) ||
+                                                    clazz.equals(Float.class) ||
+                                                    clazz.equals(Boolean.class) ||
+                                                    clazz.equals(Byte.class) ||
+                                                    clazz.equals(Short.class) ||
+                                                    clazz.equals(Character.class)) {
+                                                params[index] = clazz.cast(param);
+                                            } else {
+                                                params[index] = objectMapper.convertValue(formMap, clazz);
+                                            }
+                                        }
+                                    }
+                                    object = objectMapper.writeValueAsString(entry.getValue().getMethod().invoke(instance, params));
+                                }
+                            } else {
+                                Parameter[] parameters = entry.getValue().getMethod().getParameters();
+                                Object[] params = new Object[parameters.length];
+                                object = objectMapper.writeValueAsString(entry.getValue().getMethod().invoke(instance, params));
+                            }
+                        }
+                    }
                 }
             }
             if (!find) {
@@ -105,6 +164,17 @@ public class BusinessServerHandler extends SimpleChannelInboundHandler<Object> {
         log.info("断开链接:" + ctx);
         userMap.remove(ctx.channel().id());
         httpRequestMap.remove(ctx.channel().id());
+    }
+
+    public boolean isPathUri(String uri, String url) {
+        if (uri.contains("{") && uri.contains("}")) {
+            int uriLastIndex = uri.lastIndexOf("/");
+            String newUri = uri.substring(0, uriLastIndex);
+            int urlLastIndex = url.lastIndexOf("/");
+            String newUrl = url.substring(0, urlLastIndex);
+            return newUri.equals(newUrl);
+        }
+        return false;
     }
 
 //    @Override
