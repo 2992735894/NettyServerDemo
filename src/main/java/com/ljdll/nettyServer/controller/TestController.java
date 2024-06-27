@@ -28,8 +28,13 @@ public class TestController {
         return R.ok("emptyBodyTest");
     }
 
+    @PostMapping("/postFormTest")
+    public R<String> postFormTest(String message) {
+        return R.ok(message);
+    }
+
     @PostMapping("/bodyTest")
-    public R<String> bodyTest(@RequestBody R<String> r) {
-        return R.ok(r.getData());
+    public R<String> bodyTest(@RequestBody FormTestParam param) {
+        return R.ok(param.getMessage());
     }
 }

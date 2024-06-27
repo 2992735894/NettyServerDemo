@@ -76,6 +76,7 @@ public class BusinessServerHandler extends SimpleChannelInboundHandler<Object> {
             Object object = null;
             for (Map.Entry<RequestMappingInfo, HandlerMethod> entry : methodMap.entrySet()) {
                 // 匹配路由
+                // 目前匹配了application/json multipart/form-data
                 if (!CollectionUtils.isEmpty(entry.getKey().getMethodsCondition().getMethods())
                         && entry.getKey().getMethodsCondition().getMethods().stream().toList().getFirst().name().equals(fullHttpRequest.method().name())
                         &&
