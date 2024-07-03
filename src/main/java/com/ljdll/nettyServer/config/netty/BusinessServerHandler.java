@@ -1,4 +1,4 @@
-package com.ljdll.nettyServer.config;
+package com.ljdll.nettyServer.config.netty;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.fasterxml.jackson.databind.ObjectMapper;

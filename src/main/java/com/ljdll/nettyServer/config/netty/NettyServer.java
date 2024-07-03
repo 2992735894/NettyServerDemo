@@ -1,4 +1,4 @@
-package com.ljdll.nettyServer.config;
+package com.ljdll.nettyServer.config.netty;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;

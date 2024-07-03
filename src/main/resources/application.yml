@@ -1,2 +1,11 @@
 server:
-  port: 8081
+  port: 8086
+
+rocketmq:
+  name-server: 127.0.0.1:9876
+  producer:
+    group: test-group
+    send-message-timeout: 3000
+    retry-times: 3
+  consumer:
+    group: test
