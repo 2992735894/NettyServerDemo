@@ -9,3 +9,15 @@ rocketmq:
     retry-times: 3
   consumer:
     group: test
+
+spring:
+  data:
+    mongodb:
+      uri: mongodb://ljdll:ljdll@localhost:27017/ljdll?authSource=admin
+
+mybatis-flex:
+  datasource:
+    dm8:
+      url: jdbc:dm://localhost:5236/LJDLL?characterSet=UTF-8
+      username: LJDLL
+      password: LJDLL

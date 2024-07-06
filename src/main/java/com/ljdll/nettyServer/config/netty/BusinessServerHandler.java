@@ -115,20 +115,23 @@ public class BusinessServerHandler extends SimpleChannelInboundHandler<Object> {
                                     Object[] params = new Object[parameters.length];
                                     if (formString.length > 1) {
                                         for (int index = 0; index < parameters.length; index++) {
-                                            Object param = formMap.get(parameters[index].getName());
-                                            Class<?> clazz = parameters[index].getType();
-                                            if (clazz.equals(String.class) ||
-                                                    clazz.equals(Integer.class) ||
-                                                    clazz.equals(Long.class) ||
-                                                    clazz.equals(Double.class) ||
-                                                    clazz.equals(Float.class) ||
-                                                    clazz.equals(Boolean.class) ||
-                                                    clazz.equals(Byte.class) ||
-                                                    clazz.equals(Short.class) ||
-                                                    clazz.equals(Character.class)) {
-                                                params[index] = clazz.cast(param);
-                                            } else {
-                                                params[index] = objectMapper.convertValue(formMap, clazz);
+                                            try {
+                                                Object param = formMap.get(parameters[index].getName());
+                                                Class<?> clazz = parameters[index].getType();
+                                                if (clazz.equals(String.class) ||
+                                                        clazz.equals(Integer.class) ||
+                                                        clazz.equals(Long.class) ||
+                                                        clazz.equals(Double.class) ||
+                                                        clazz.equals(Float.class) ||
+                                                        clazz.equals(Boolean.class) ||
+                                                        clazz.equals(Byte.class) ||
+                                                        clazz.equals(Short.class) ||
+                                                        clazz.equals(Character.class)) {
+                                                    params[index] = clazz.cast(param);
+                                                } else {
+                                                    params[index] = objectMapper.convertValue(formMap, clazz);
+                                                }
+                                            } catch (Exception ignore) {
                                             }
                                         }
                                     }
@@ -137,6 +140,24 @@ public class BusinessServerHandler extends SimpleChannelInboundHandler<Object> {
                             } else {
                                 Parameter[] parameters = entry.getValue().getMethod().getParameters();
                                 Object[] params = new Object[parameters.length];
+                                try {
+
+                                    for (int index = 0; index < parameters.length; index++) {
+                                        Class<?> clazz = parameters[index].getType();
+                                        if (clazz.equals(Integer.class) ||
+                                                clazz.equals(Long.class) ||
+                                                clazz.equals(Double.class) ||
+                                                clazz.equals(Float.class) ||
+                                                clazz.equals(Boolean.class) ||
+                                                clazz.equals(Byte.class) ||
+                                                clazz.equals(Short.class) ||
+                                                clazz.equals(Character.class)) {
+                                            params[index] = clazz.cast(0);
+                                        }
+                                    }
+                                } catch (Exception ignore) {
+                                }
+
                                 object = objectMapper.writeValueAsString(entry.getValue().getMethod().invoke(instance, params));
                             }
                         }
