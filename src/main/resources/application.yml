@@ -18,6 +18,7 @@ spring:
 mybatis-flex:
   datasource:
     dm8:
+      driverClassName: dm.jdbc.driver.DmDriver
       url: jdbc:dm://localhost:5236/LJDLL?characterSet=UTF-8
       username: LJDLL
       password: LJDLL

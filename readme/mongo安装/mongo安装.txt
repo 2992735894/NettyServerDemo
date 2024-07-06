@@ -1,0 +1,4 @@
+从华为云拉取镜像
+docker pull mongo latest
+启动容器并对数据持久化
+docker run -itd --name mongo -v D:\dockerStore\mongo:/data/db -p 27017:27017 mongo:latest 
