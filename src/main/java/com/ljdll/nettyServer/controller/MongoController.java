@@ -2,6 +2,7 @@ package com.ljdll.nettyServer.controller;
 
 import com.ljdll.nettyServer.common.constant.R;
 import com.ljdll.nettyServer.entity.MongoEntity;
+import com.ljdll.nettyServer.service.MongoService;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MongoController {
     private final MongoTemplate mongoTemplate;
+    private final MongoService mongoService;
 
     @PostMapping("/insert")
     public R<Boolean> insert(@RequestBody MongoEntity entity) {
@@ -74,6 +76,12 @@ public class MongoController {
     @GetMapping("/page")
     public R<List<MongoEntity>> page(Integer pageNum, Integer pageSize) {
         return R.ok(mongoTemplate.find(new Query().skip((long) (pageNum - 1) * pageSize).limit(pageSize), MongoEntity.class));
+    }
+
+    @PostMapping("/transactionTest")
+    public R<Boolean> transactionTest() {
+        mongoService.transactionTest();
+        return R.ok(true);
     }
 
 }

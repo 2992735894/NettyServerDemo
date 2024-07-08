@@ -14,11 +14,21 @@ spring:
   data:
     mongodb:
       uri: mongodb://ljdll:ljdll@localhost:27017/ljdll?authSource=admin
+  datasource:
+    druid:
+      validation-query: SELECT 1
+
 
 mybatis-flex:
   datasource:
     dm8:
       driverClassName: dm.jdbc.driver.DmDriver
-      url: jdbc:dm://localhost:5236/LJDLL?characterSet=UTF-8
+      url: jdbc:dm://localhost:5236/LJDLL?characterSet=UTF-8&autoCommit=false
       username: LJDLL
-      password: LJDLL
+      password: cangshu924
+    mysql:
+      driverClassName: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://localhost:3306/mysql_test?characterSet=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      username: test
+      password: cangshu924
+
